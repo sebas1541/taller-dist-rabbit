@@ -1,0 +1,43 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-server
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    networks:
+      - messaging-network
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=password
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+
+  sender:
+    build:
+      context: ./rabbit
+    env_file: .env
+    networks:
+      - messaging-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command: sh -c "sleep 12 && node send.js"
+
+  receiver:
+    build:
+      context: ./rabbit
+    env_file: .env
+    networks:
+      - messaging-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command: sh -c "sleep 18 && node receive.js"
+
+networks:
+  messaging-network:
+    driver: bridge
